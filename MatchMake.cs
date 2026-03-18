@@ -25,7 +25,7 @@ public class MatchMake : BasePlugin, IPluginConfig<MatchMakeConfig>
 {
     public override string ModuleName => "MatchMake";
     public override string ModuleAuthor => "Phoenix";
-    public override string ModuleVersion => "1.0.0";
+    public override string ModuleVersion => "1.0";
     private bool allPlayerJoin = false;
     private bool LeaderCanTakePause = false;
     private bool IsTimeOut = false;
