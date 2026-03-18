@@ -78,7 +78,6 @@ public class MatchMake : BasePlugin, IPluginConfig<MatchMakeConfig>
         RegisterEventHandler<EventPlayerTeam>(CheckEmptyServer);
         RegisterEventHandler<EventCsWinPanelMatch>(FinalFeatures);
         RegisterEventHandler<EventPlayerDisconnect>(AllPlayersLeave);
-        RegisterEventHandler<EventRoundStart>(CountRounds);
         RegisterEventHandler<EventPlayerConnectFull>(DeleteAllTimer);
         RegisterEventHandler<EventPlayerDisconnect>(AutoReplacePlayer);
         RegisterListener<OnMapStart>(ApplyMatchSettings);
@@ -152,12 +151,6 @@ public class MatchMake : BasePlugin, IPluginConfig<MatchMakeConfig>
 
         TimeOutsMessage?.Kill();
 
-        return HookResult.Continue;
-    }
-    private HookResult CountRounds (EventRoundStart @event, GameEventInfo info)
-    {
-        if (currentState != MatchState.Timeout && currentState != MatchState.MainMatch) return HookResult.Continue;
-        allCountRound++;
         return HookResult.Continue;
     }
     private void ApplyMatchSettings (string map)
@@ -417,12 +410,6 @@ public class MatchMake : BasePlugin, IPluginConfig<MatchMakeConfig>
         }
 
         string nameCommand = info.GetArg(1);
-
-        // if (allCountRound >= 3)
-        // {
-        //     player.PrintToChat(Localizer["Prefix"] + Localizer["YouCantChangeNameNow"]);
-        //     return;
-        // }
 
         if (SecondTeam.Contains(player))
         {
