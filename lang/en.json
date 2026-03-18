@@ -1,0 +1,26 @@
+{
+	"Prefix": "{green}[MatchMake]",
+
+	"CHAT": "These are phrases for CHAT output",
+	"LeaderMessageAboutStaySwitch": "{green}Choose a side, !stay - stay, !switch - switch side",
+	"DamageMessage": "{green}Dealt: [{0}/{1}] Received: [{2}/{3}] - {4}({5} HP)",
+	"YouHaveReadyStatus": "{green}You have already confirmed your readiness!",
+	"PlayerSendReady": "{green}Player {0} confirmed their readiness [{1}/{2}]",
+	"AllPlayersReady": "{green}All players are ready, the knife round will start soon",
+	"UnReadyPlayer": "{green}Player {0} cancelled their readiness [{1}/{2}]",
+	"YouNotHaveReadyStatus": "{green}You have not confirmed your readiness",
+	"CantTakePauseNow":	"{green}You cannot take a pause now, it can only be taken after the round starts!",
+	"WelcomeLeader": "{green}You have been appointed leader! If you win the knife round, you can choose !stay or !switch. You can also change your team name using !changename <newname> (Only in the knife round and first round)",
+	"AllPlayersJoin": "{green}All players are here, waiting for readiness confirmation, type !ready",
+	"CanUseOnlyPlayerInGame": "{green}This command can only be used by players participating in the tournament!",
+	"NotCorrectName": "{green}Invalid team name, use !changename <name>, team name cannot contain spaces!", 
+	"YouCantChangeNameNow": "{green}You cannot change the team name after the first round :(",
+	"MessageAboutUnPause":	"{green}Pause started, if you want to unpause early, type !unpause",
+
+	"HUD": "These are phrases for CENTER output (colors are not supported here)",
+	"WaitingLeader": "Waiting for leader's decision",
+	"DontHavePermission": "Sorry, you cannot do that :(",
+	"TimerText": "Technical pause\nLeft",
+	"OtherLeaderTakePause":	"Another leader has already taken a pause",
+	"WaitingPlayers": "Waiting for all players to connect [{0}/{1}]"
+}
