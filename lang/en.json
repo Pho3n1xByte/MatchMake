@@ -10,7 +10,7 @@
 	"UnReadyPlayer": "{green}Player {0} cancelled their readiness [{1}/{2}]",
 	"YouNotHaveReadyStatus": "{green}You have not confirmed your readiness",
 	"CantTakePauseNow":	"{green}You cannot take a pause now, it can only be taken after the round starts!",
-	"WelcomeLeader": "{green}You have been appointed leader! If you win the knife round, you can choose !stay or !switch. You can also change your team name using !changename <newname> (Only in the knife round and first round)",
+	"WelcomeLeader": "{green}You have been appointed leader! If you win the knife round, you can choose !stay or !switch. You can also change your team name using !changename <newname>",
 	"AllPlayersJoin": "{green}All players are here, waiting for readiness confirmation, type !ready",
 	"CanUseOnlyPlayerInGame": "{green}This command can only be used by players participating in the tournament!",
 	"NotCorrectName": "{green}Invalid team name, use !changename <name>, team name cannot contain spaces!", 
