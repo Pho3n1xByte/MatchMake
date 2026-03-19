@@ -251,7 +251,7 @@ public class MatchMake : BasePlugin, IPluginConfig<MatchMakeConfig>
     }
     private HookResult SaveHp (EventRoundStart @event, GameEventInfo info)
     {
-        if (Config.TypeFriendlyFire == "Faceit") return HookResult.Continue;
+        if (Config.TypeFriendlyFire != "Faceit") return HookResult.Continue;
 
         Server.NextFrame(() =>
         {
