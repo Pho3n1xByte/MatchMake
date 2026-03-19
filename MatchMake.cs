@@ -945,6 +945,7 @@ public class MatchMake : BasePlugin, IPluginConfig<MatchMakeConfig>
             Server.ExecuteCommand("mp_weapons_allow_typecount 500");
             Server.ExecuteCommand("mp_teamname_1 \"\"");
             Server.ExecuteCommand("mp_teamname_2 \"\"");
+            Server.ExecuteCommand("sv_allow_votes 0");
             
             if (!Config.EnableDrawOrNot)
             {
