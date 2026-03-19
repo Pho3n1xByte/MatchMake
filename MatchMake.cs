@@ -725,6 +725,7 @@ public class MatchMake : BasePlugin, IPluginConfig<MatchMakeConfig>
                 messageCountPlayerNeed = AddTimer(0.1f, () =>
                 {
                     int countCurrentPlayer = AllPlayersGame.Count;
+                    if (player == null || !player.IsValid) return;
                     player.PrintToCenterAlert(Localizer["WaitingPlayers", countCurrentPlayer, requiredPlayer]);
                 },
                 CounterStrikeSharp.API.Modules.Timers.TimerFlags.REPEAT
@@ -756,10 +757,11 @@ public class MatchMake : BasePlugin, IPluginConfig<MatchMakeConfig>
             {
                 allPlayerJoin = false;
                 foreach (var players in AllPlayersGame)
-                {
+                {   
                     messageCountPlayerNeed = AddTimer(0.1f, () =>
                     {
                         int countCurrentPlayer = AllPlayersGame.Count;
+                        if (players == null || !players.IsValid) return;
                         players.PrintToCenterAlert(Localizer["WaitingPlayers", countCurrentPlayer, requiredPlayer]);
                         },
                         CounterStrikeSharp.API.Modules.Timers.TimerFlags.REPEAT
@@ -884,6 +886,7 @@ public class MatchMake : BasePlugin, IPluginConfig<MatchMakeConfig>
                 {
                     endMessage = AddTimer(0.1f, () =>
                     {
+                        if (player == null || !player.IsValid) return;
                         player.PrintToCenterAlert(Localizer["WaitingLeader"]);
                     },
                     CounterStrikeSharp.API.Modules.Timers.TimerFlags.REPEAT
@@ -1041,7 +1044,7 @@ public class MatchMake : BasePlugin, IPluginConfig<MatchMakeConfig>
     {
         foreach (var weapon in Utilities.FindAllEntitiesByDesignerName<CCSWeaponBase>("weapon"))
         {
-            if (weapon == null) continue;
+            if (weapon == null || !weapon.IsValid) continue;
             if (weapon.Entity == null) continue;
             if (!weapon.DesignerName.StartsWith("weapon_")) continue;
             if (weapon.OwnerEntity != null && weapon.OwnerEntity.IsValid) continue;
