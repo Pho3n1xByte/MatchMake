@@ -43,7 +43,6 @@ public class MatchMake : BasePlugin, IPluginConfig<MatchMakeConfig>
     private CounterStrikeSharp.API.Modules.Timers.Timer? TimeOutsMessage;
     private CounterStrikeSharp.API.Modules.Timers.Timer? messageCountPlayerNeed;
     private int knifeWinnerTeam;    
-    private int allCountRound = 0;
     private int requiredPlayer = 0;
     private static int countTimeOut = 2;
     private int timeTimeOuts = 30;
