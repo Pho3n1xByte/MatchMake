@@ -347,6 +347,7 @@ public class MatchMake : BasePlugin, IPluginConfig<MatchMakeConfig>
 
         if (attacker == null || victim == null || !attacker.IsValid || !victim.IsValid) return HookResult.Continue;
         if (attacker == victim) return HookResult.Continue;
+        if (attacker.Team == victim.Team) return HookResult.Continue;
 
         EpicDamage[attacker][victim].CurrentHp -= @event.DmgHealth;
         EpicDamage[attacker][victim].DamageDealt += @event.DmgHealth;
