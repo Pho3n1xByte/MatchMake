@@ -23,9 +23,9 @@ You can edit the translations in the `plugins/MatchMake/lang/` folder.
 - `PauseTime` - Сколько секунд длится пауза.
 - `EnableAutoStart` - Будет ли матч запускаться сразу при заходе игроков, `true` - Матч будет сам запускаться, `false` - только `@css/root` сможет запустить матч.
 - `AutoReplacePlayers` - Когда выходит из игры какой-нибудь игрок который был в игре, переносить ли наблюдателя на его место, `true` - будет моментальная замена (при наличии спектатора), `false` - не будет никакой замены.
-- "CoolDownMessageUnReady" - Раз во сколько секунд выводить список неготовых игроков в чат.
-- "EnableDefaultAgent" - Включить ли дефолтных агентов, `true` - всегда будут дефолтные агенты, даже если есть купленные, `false` - могут быть любые агенты.
-- "ClanTagLeader" - Какой будет клан-тег у лидера.\
+- `CoolDownMessageUnReady` - Раз во сколько секунд выводить список неготовых игроков в чат.
+- `EnableDefaultAgent` - Включить ли дефолтных агентов, `true` - всегда будут дефолтные агенты, даже если есть купленные, `false` - могут быть любые агенты.
+- `ClanTagLeader` - Какой будет клан-тег у лидера.\
   🏴󠁧󠁢󠁥󠁮󠁧󠁿:
 - `PlayersForStart` - The number of players required for the match to be ready to start.
 - `EnableMessageAboutDamage` - Display a message at the end of the round showing damage dealt and received. `true` = enabled, `false` = disabled.
@@ -35,9 +35,9 @@ You can edit the translations in the `plugins/MatchMake/lang/` folder.
 - `PauseTime` - The duration of a pause in seconds.
 - `EnableAutoStart` - Automatically start the match once all players have connected. `true` = Match starts automatically, `false` = Only a player with `@css/root` flag can start the match.
 - `AutoReplacePlayers` - Automatically replace a disconnected player with a spectator. `true` = Instant replacement (if a spectator is available), `false` = No replacement.
-- "CoolDownMessageUnReady" — How often (in seconds) to display the list of unready players in chat.
-- "EnableDefaultAgent" — Whether to enable default agents. `true` — always use default agents, even if players have purchased ones; `false` — any agents are allowed.
-- "ClanTagLeader" — What the clan tag for the leader will be.
+- `CoolDownMessageUnReady` — How often (in seconds) to display the list of unready players in chat.
+- `EnableDefaultAgent` — Whether to enable default agents. `true` — always use default agents, even if players have purchased ones; `false` — any agents are allowed.
+- `ClanTagLeader` — What the clan tag for the leader will be.
 ## Команды / Commands
 - `!ready/!r` - Подтверждение готовности игрока.
 - `!unready/!ur` - Убирает готовность игрока.
