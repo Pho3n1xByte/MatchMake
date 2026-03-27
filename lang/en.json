@@ -16,6 +16,7 @@
 	"NotCorrectName": "{green}Invalid team name, use !changename <name>, team name cannot contain spaces!", 
 	"YouCantChangeNameNow": "{green}You cannot change the team name after the first round :(",
 	"MessageAboutUnPause":	"{green}Pause started, if you want to unpause early, type !unpause",
+	"MessageAboutUnReady": "{green}The following players are not ready: {red}{0}",
 
 	"HUD": "These are phrases for CENTER output (colors are not supported here)",
 	"WaitingLeader": "Waiting for leader's decision",

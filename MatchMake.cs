@@ -30,6 +30,7 @@ public class MatchMake : BasePlugin, IPluginConfig<MatchMakeConfig>
     private bool LeaderCanTakePause = false;
     private bool IsTimeOut = false;
     private bool IsStay = true;
+    private bool WriteMessageAboutReady = true;
     private Dictionary<CCSPlayerController, int> SaveHealth = new();
     private HashSet<CCSPlayerController> AllPlayersGame = new();
     private HashSet<CCSPlayerController> PlayerReadyList = new();
@@ -39,9 +40,11 @@ public class MatchMake : BasePlugin, IPluginConfig<MatchMakeConfig>
     private Dictionary<ulong, CsTeam> PlayerLastTeamAfterDisconnect = new();
     private Dictionary<CCSPlayerController, Dictionary<CCSPlayerController, StatsDamage>> EpicDamage = new();
     private List<CounterStrikeSharp.API.Modules.Timers.Timer> TimersPlayers = new();
-    private CounterStrikeSharp.API.Modules.Timers.Timer? endMessage;
+    private List<CounterStrikeSharp.API.Modules.Timers.Timer> endMessage = new();
     private CounterStrikeSharp.API.Modules.Timers.Timer? TimeOutsMessage;
     private CounterStrikeSharp.API.Modules.Timers.Timer? messageCountPlayerNeed;
+    private CounterStrikeSharp.API.Modules.Timers.Timer? messageAboutLeader; 
+    private CounterStrikeSharp.API.Modules.Timers.Timer? TimerAboutUnReady;
     private int knifeWinnerTeam;    
     private int requiredPlayer = 0;
     private static int countTimeOut = 2;
@@ -79,6 +82,10 @@ public class MatchMake : BasePlugin, IPluginConfig<MatchMakeConfig>
         RegisterEventHandler<EventPlayerDisconnect>(AllPlayersLeave);
         RegisterEventHandler<EventPlayerConnectFull>(DeleteAllTimer);
         RegisterEventHandler<EventPlayerDisconnect>(AutoReplacePlayer);
+        RegisterEventHandler<EventPlayerSpawn>(ClearWeaponsInKnifeRound);
+        RegisterEventHandler<EventPlayerSpawn>(SetPawnHealth);
+        RegisterEventHandler<EventPlayerSpawn>(SetClanTagLeader);
+        RegisterEventHandler<EventPlayerSpawn>(SetDefaultAgent);
         RegisterListener<OnMapStart>(ApplyMatchSettings);
         AddCommand("css_ready", "Подтверждает готовность игрока", ReadyPlayer);
         AddCommand("css_unready", "Убирает готовность игроков", UnReadyPlayer);
@@ -102,6 +109,76 @@ public class MatchMake : BasePlugin, IPluginConfig<MatchMakeConfig>
         requiredPlayer = Config.NeedPlayer;
         countTimeOut = Config.CountTimersAll;
         timeTimeOuts = Config.TimeTimersSecond;
+    } 
+    private HookResult SetDefaultAgent (EventPlayerSpawn @event, GameEventInfo info)
+    {
+        if (!Config.EnableDefaultAgent) return HookResult.Continue;
+
+        var player = @event.Userid;
+        if (player == null || !player.IsValid) return HookResult.Continue;
+        CsTeam numTeam = player.Team;
+        var pawn = player.PlayerPawn.Value;
+        if (pawn == null || !pawn.IsValid) return HookResult.Continue;
+
+        Server.NextFrame(() =>
+        {
+            if (numTeam == CsTeam.Terrorist)
+            {
+                pawn.SetModel("characters/models/tm_phoenix/tm_phoenix.vmdl");
+            }
+            else if (numTeam == CsTeam.CounterTerrorist)
+            {
+                pawn.SetModel("characters/models/ctm_sas/ctm_sas.vmdl");
+            }
+        });
+    
+        return HookResult.Continue;
+    }
+    private HookResult SetClanTagLeader (EventPlayerSpawn @event, GameEventInfo info)
+    {
+        var player = @event.Userid;
+        
+        if (player == null || !player.IsValid) return HookResult.Continue;
+        
+        if (TeamLeaders.Contains(player))
+        {
+            player.Clan = Config.ClanTagLeader;
+            Utilities.SetStateChanged(player, "CCSPlayerController", "m_szClan");
+        }
+
+        return HookResult.Continue;
+    }
+    private HookResult SetPawnHealth (EventPlayerSpawn @event, GameEventInfo info)
+    {
+        var player = @event.Userid;
+        
+        if (player == null || !player.IsValid) return HookResult.Continue;
+        var pawn = player.PlayerPawn.Value;
+        if (pawn == null || !pawn.IsValid) return HookResult.Continue;
+
+        SaveHealth[player] = pawn.Health;
+
+        return HookResult.Continue;
+    }
+    private HookResult ClearWeaponsInKnifeRound (EventPlayerSpawn @event, GameEventInfo info)
+    {
+        if (currentState != MatchState.AllPlayersReady && currentState != MatchState.KnifeRound) return HookResult.Continue;
+        var player = @event.Userid;
+
+        Server.NextFrame(() =>
+        {
+            if (currentState != MatchState.KnifeRound) return;
+
+            if (player == null || !player.IsValid) return;
+            player.RemoveWeapons();
+            player.GiveNamedItem("weapon_knife");
+            player.GiveNamedItem("item_assaultsuit");
+
+            if (player.InGameMoneyServices == null) return;
+            player.InGameMoneyServices.Account = 0;
+        });
+
+        return HookResult.Continue;
     }
     private HookResult AutoReplacePlayer (EventPlayerDisconnect @event, GameEventInfo info)
     {
@@ -272,23 +349,40 @@ public class MatchMake : BasePlugin, IPluginConfig<MatchMakeConfig>
         var attacker = @event.Attacker;
         var victim = @event.Userid;
 
-        if (attacker == null || victim == null || !attacker.IsValid || !victim.IsValid) return HookResult.Continue;
-
-        var teamAttacker = attacker.Team;
+        if (victim == null || !victim.IsValid) return HookResult.Continue;
+        
         var teamVictim = victim.Team;
         var pawn = victim.PlayerPawn.Value;
 
+        string weapon = @event.Weapon;
+
         if (pawn == null || !pawn.IsValid) return HookResult.Continue;
-        if (attacker == victim) return HookResult.Continue;
+        if (attacker == null || !attacker.IsValid)
+        {
+            SaveHealth[victim] = pawn.Health;
+            return HookResult.Continue;
+        }
+        var teamAttacker = attacker.Team;
+        if (attacker == victim)
+        {
+            SaveHealth[victim] = pawn.Health;
+            return HookResult.Continue;
+        }
         if (teamAttacker == teamVictim)
         {
-            if (@event.Weapon == "inferno" || @event.Weapon == "hegrenade")
+            if (weapon == "inferno" || weapon == "hegrenade")
             {
                 SaveHealth[victim] = pawn.Health;
                 return HookResult.Continue;
-            } 
-            pawn.Health = SaveHealth[victim];
-            Utilities.SetStateChanged(pawn, "CBaseEntity", "m_iHealth");
+            }
+            else
+            {
+                pawn.Health = SaveHealth[victim];
+                Utilities.SetStateChanged(pawn, "CBaseEntity", "m_iHealth");
+            }
+        }
+        else
+        {
             SaveHealth[victim] = pawn.Health;
         }
 
@@ -296,8 +390,7 @@ public class MatchMake : BasePlugin, IPluginConfig<MatchMakeConfig>
     }
     private HookResult MessageAboutDamageFirstStep (EventRoundStart @event, GameEventInfo info)
     {
-        if (!Config.EnableMessageOrNot || (currentState != MatchState.KnifeRound && currentState != MatchState.MainMatch && currentState != MatchState.Timeout)) return HookResult.Continue;
-
+        if (!Config.EnableMessageOrNot || (currentState != MatchState.AllPlayersReady && currentState != MatchState.KnifeRound && currentState != MatchState.MainMatch && currentState != MatchState.Timeout)) return HookResult.Continue;
         EpicDamage.Clear();
 
         foreach (var player in Utilities.GetPlayers())
@@ -306,6 +399,7 @@ public class MatchMake : BasePlugin, IPluginConfig<MatchMakeConfig>
             EpicDamage[player] = new Dictionary<CCSPlayerController, StatsDamage>();
             foreach (var players in Utilities.GetPlayers())
             {
+                if (player == players) continue;
                 if (players.Team != CsTeam.Terrorist) continue;
                 EpicDamage[player][players] = new StatsDamage
                 {
@@ -361,33 +455,36 @@ public class MatchMake : BasePlugin, IPluginConfig<MatchMakeConfig>
     {
         if (!Config.EnableMessageOrNot || (currentState != MatchState.KnifeRound && currentState != MatchState.MainMatch && currentState != MatchState.Timeout)) return HookResult.Continue;
 
-        foreach (var player in Utilities.GetPlayers())
+        Server.NextFrame(() =>
         {
-            if (player == null || !player.IsValid) continue;
-            foreach (var players in Utilities.GetPlayers())
+            foreach (var player in Utilities.GetPlayers())
             {
-                if (player == players) continue;
-
-                int attackerDamage = EpicDamage[player][players].DamageDealt;
-                int attackerHits = EpicDamage[player][players].HitsDealt;
-                int victimDamage = EpicDamage[player][players].DamageReceived;
-                int victimHits = EpicDamage[player][players].HitsReceived;
-                int victimHealth = EpicDamage[player][players].CurrentHp;
-                string playerName = EpicDamage[player][players].OpponentName;
-                if (players != null && players.IsValid && players.PlayerPawn.Value != null)
+                if (player == null || !player.IsValid || player.Team == CsTeam.Spectator || player.Team == CsTeam.None) continue;
+                foreach (var players in Utilities.GetPlayers())
                 {
-                    if (!players.PawnIsAlive || players.PlayerPawn.Value.Health <= 0)
+                    if (player == players || players.Team == CsTeam.Spectator || player.Team == CsTeam.None) continue;
+                    if (player.Team == players.Team) continue;
+                    int attackerDamage = EpicDamage[player][players].DamageDealt;
+                    int attackerHits = EpicDamage[player][players].HitsDealt;
+                    int victimDamage = EpicDamage[player][players].DamageReceived;
+                    int victimHits = EpicDamage[player][players].HitsReceived;
+                    int victimHealth = EpicDamage[player][players].CurrentHp;
+                    string playerName = EpicDamage[player][players].OpponentName;
+                    if (players != null && players.IsValid && players.PlayerPawn.Value != null)
                     {
-                        victimHealth = 0;
+                        if (!players.PawnIsAlive || players.PlayerPawn.Value.Health <= 0)
+                        {
+                            victimHealth = 0;
+                        }
+                        else
+                        {
+                            victimHealth = players.PlayerPawn.Value.Health;
+                        }
                     }
-                    else
-                    {
-                        victimHealth = players.PlayerPawn.Value.Health;
-                    }
+                    player.PrintToChat(Localizer["Prefix"] + Localizer["DamageMessage", attackerDamage, attackerHits, victimDamage, victimHits, playerName, victimHealth]);
                 }
-                player.PrintToChat(Localizer["Prefix"] + Localizer["DamageMessage", attackerDamage, attackerHits, victimDamage, victimHits, playerName, victimHealth]);
             }
-        }
+        });
 
         return HookResult.Continue;
     }
@@ -523,7 +620,7 @@ public class MatchMake : BasePlugin, IPluginConfig<MatchMakeConfig>
 
         if (FirstTeam.Contains(player) || SecondTeam.Contains(player))
         {
-            PlayerLastTeamAfterDisconnect.Add(player.SteamID, player.Team);
+            PlayerLastTeamAfterDisconnect[player.SteamID] = player.Team;
         }
 
         return HookResult.Continue;
@@ -535,32 +632,63 @@ public class MatchMake : BasePlugin, IPluginConfig<MatchMakeConfig>
         var player = @event.Userid;
         if (player == null || !player.IsValid) return HookResult.Continue;
 
-        if (FirstTeam.Contains(player) || SecondTeam.Contains(player))
+        Server.NextFrame(() =>
         {
-            if (FirstTeam.Contains(player) && FirstTeam.Count >= 2)
+            if (FirstTeam.Contains(player) || SecondTeam.Contains(player))
             {
-                PlayerMoveTeamAfterDisconnect(player, FirstTeam);
-            }
-            else if (SecondTeam.Contains(player) && SecondTeam.Count >= 2)
-            {
-                PlayerMoveTeamAfterDisconnect(player, SecondTeam);
+                if (FirstTeam.Contains(player) && FirstTeam.Count >= 2)
+                {
+                    bool isConnect = false;
+                    foreach (var playerok in FirstTeam)
+                    {
+                        if (playerok.Connected == PlayerConnectedState.PlayerConnected)
+                        {
+                            isConnect = true;
+                            break;
+                        }
+                    }
+                    if (isConnect)
+                    {
+                        PlayerMoveTeamAfterDisconnect(player, FirstTeam);
+                    }
+                    else
+                    {
+                        ConnectOldTeam(player);
+                    }
+                }
+                else if (SecondTeam.Contains(player) && SecondTeam.Count >= 2)
+                {
+                    bool isConnect = false;
+                    foreach (var playerok in SecondTeam)
+                    {
+                        if (playerok.Connected == PlayerConnectedState.PlayerConnected)
+                        {
+                            isConnect = true;
+                            break;
+                        }
+                    }
+                    if (isConnect)
+                    {
+                        PlayerMoveTeamAfterDisconnect(player, SecondTeam);
+                    }
+                    else
+                    {
+                        ConnectOldTeam(player);
+                    }
+                }
+                else
+                {
+                    if (PlayerLastTeamAfterDisconnect.ContainsKey(player.SteamID))
+                    {
+                        ConnectOldTeam(player);
+                    }
+                }
             }
             else
             {
-                if (PlayerLastTeamAfterDisconnect.ContainsKey(player.SteamID))
-                {
-                    Server.ExecuteCommand("bot_kick");
-                    CsTeam LastTeam = PlayerLastTeamAfterDisconnect[player.SteamID];
-                    player.ChangeTeam(LastTeam);
-
-                    PlayerLastTeamAfterDisconnect.Remove(player.SteamID);
-                }
+                player.ChangeTeam(CsTeam.Spectator);
             }
-        }
-        else
-        {
-            player.ChangeTeam(CsTeam.Spectator);
-        }
+        });
 
         return HookResult.Continue;
     }
@@ -741,7 +869,28 @@ public class MatchMake : BasePlugin, IPluginConfig<MatchMakeConfig>
                     t?.Kill();
                 }
                 TimersPlayers.Clear();
-                Server.PrintToChatAll(Localizer["Prefix"] + Localizer["AllPlayersJoin"]);
+                if (WriteMessageAboutReady)
+                {
+                    Server.PrintToChatAll(Localizer["Prefix"] + Localizer["AllPlayersJoin"]);
+                    WriteMessageAboutReady = false;
+                    TimerAboutUnReady = AddTimer(Config.CoolDownMessageUnReady, () =>
+                    {
+                        if (currentState != MatchState.Warmup) return;
+                        List<string> WhoUnReady = new();
+                        foreach (var player in Utilities.GetPlayers())
+                        {
+                            if (player.Team != CsTeam.Terrorist && player.Team != CsTeam.CounterTerrorist) continue;
+                            if (!PlayerReadyList.Contains(player))
+                            {
+                                WhoUnReady.Add(player.PlayerName);
+                            }
+                        }
+                        string allNames = string.Join(", ", WhoUnReady);
+                        Server.PrintToChatAll(Localizer["Prefix"] + Localizer["MessageAboutUnReady", allNames]);
+                    },
+                    CounterStrikeSharp.API.Modules.Timers.TimerFlags.REPEAT
+                    );
+                }
                 allPlayerJoin = true;
             }
             else if (AllPlayersGame.Count > requiredPlayer)
@@ -757,6 +906,7 @@ public class MatchMake : BasePlugin, IPluginConfig<MatchMakeConfig>
             else
             {
                 allPlayerJoin = false;
+                WriteMessageAboutReady = true;
                 foreach (var players in AllPlayersGame)
                 {   
                     messageCountPlayerNeed = AddTimer(0.1f, () =>
@@ -814,6 +964,7 @@ public class MatchMake : BasePlugin, IPluginConfig<MatchMakeConfig>
             PlayerReadyList.Clear();
             Server.ExecuteCommand("mp_weapons_allow_typecount 2");
             currentState = MatchState.AllPlayersReady;
+            TimerAboutUnReady?.Kill();
         }
         return;
     }
@@ -848,17 +999,6 @@ public class MatchMake : BasePlugin, IPluginConfig<MatchMakeConfig>
         {
             return HookResult.Continue;
         }
-        
-        foreach (var player in AllPlayersGame)
-        {
-            if (player == null || !player.IsValid || !player.PawnIsAlive) continue;
-            player.RemoveWeapons();
-            player.GiveNamedItem("weapon_knife");
-            player.GiveNamedItem("item_assaultsuit");
-
-            if (player.InGameMoneyServices == null) continue;
-            player.InGameMoneyServices.Account = 0;
-        }
 
         return HookResult.Continue;
     }
@@ -885,13 +1025,14 @@ public class MatchMake : BasePlugin, IPluginConfig<MatchMakeConfig>
                 }
                 else
                 {
-                    endMessage = AddTimer(0.1f, () =>
+                    messageAboutLeader = AddTimer(0.1f, () =>
                     {
                         if (player == null || !player.IsValid) return;
                         player.PrintToCenterAlert(Localizer["WaitingLeader"]);
                     },
                     CounterStrikeSharp.API.Modules.Timers.TimerFlags.REPEAT
                     );
+                    endMessage.Add(messageAboutLeader);
                 }
             }
         });
@@ -928,7 +1069,11 @@ public class MatchMake : BasePlugin, IPluginConfig<MatchMakeConfig>
         TeamLeaders.Clear();
         FirstTeam.Clear();
         SecondTeam.Clear();
-        endMessage?.Kill();
+        foreach (var timer in endMessage)
+        {
+            timer?.Kill();
+        }
+        endMessage.Clear();
         TimeOutsMessage?.Kill();
         foreach (var timer in TimersPlayers)
         {
@@ -972,8 +1117,11 @@ public class MatchMake : BasePlugin, IPluginConfig<MatchMakeConfig>
     public void SwitchOrStay ()
     {
         currentState = MatchState.MainMatch;
-
-        endMessage?.Kill();
+        foreach (var timer in endMessage)
+        {
+            timer?.Kill();
+        }
+        endMessage.Clear();
         if (!IsStay)
         {
             (FirstTeam, SecondTeam) = (SecondTeam, FirstTeam);
@@ -992,14 +1140,13 @@ public class MatchMake : BasePlugin, IPluginConfig<MatchMakeConfig>
 
         foreach (var players in listPlayers)
         {
-            if (players != null && !players.IsValid && players.Connected == PlayerConnectedState.PlayerConnected)
+            if (players != null && players.IsValid && players.Connected == PlayerConnectedState.PlayerConnected && players.Team != CsTeam.None)
             {
                 teamNum = players.Team;
+                player.ChangeTeam(teamNum);
                 break;
             }
-        }
-
-        player.ChangeTeam(teamNum);
+        }        
     }
     public void SetNewLeaderIfListEmpty ()
     {
@@ -1022,13 +1169,20 @@ public class MatchMake : BasePlugin, IPluginConfig<MatchMakeConfig>
 
         if (!haveLeaderFirstTeam)
         {
-            int randomIndexPlayerFirst = Random.Shared.Next(0, FirstTeam.Count - 1);
-            Server.ExecuteCommand($"css_addleader {FirstTeam.ElementAt(randomIndexPlayerFirst).SteamID}");
+            if (FirstTeam.Count != 0) 
+            {
+                int randomIndexPlayerFirst = Random.Shared.Next(0, FirstTeam.Count - 1);
+                Server.ExecuteCommand($"css_addleader {FirstTeam.ElementAt(randomIndexPlayerFirst).SteamID}");
+            }
         }
         if (!haveLeaderSecondTeam)
         {
-            int randomIndexPlayerSecond = Random.Shared.Next(0, SecondTeam.Count - 1);
-            Server.ExecuteCommand($"css_addleader {SecondTeam.ElementAt(randomIndexPlayerSecond).SteamID}");
+            if (SecondTeam.Count != 0)
+            {
+                int randomIndexPlayerSecond = Random.Shared.Next(0, SecondTeam.Count - 1);
+                Server.ExecuteCommand($"css_addleader {SecondTeam.ElementAt(randomIndexPlayerSecond).SteamID}");
+            }
+            
         }
     }
     public void SetPause ()
@@ -1052,6 +1206,14 @@ public class MatchMake : BasePlugin, IPluginConfig<MatchMakeConfig>
 
             weapon.Remove();
         }
+    }
+    public void ConnectOldTeam (CCSPlayerController player)
+    {
+        Server.ExecuteCommand("bot_kick");
+        CsTeam LastTeam = PlayerLastTeamAfterDisconnect[player.SteamID];
+        player.ChangeTeam(LastTeam);
+
+        PlayerLastTeamAfterDisconnect.Remove(player.SteamID);
     }
 }
 
@@ -1090,4 +1252,13 @@ public class MatchMakeConfig : BasePluginConfig
 
     [JsonPropertyName("AutoReplacePlayers")]
     public bool AutoReplacePlayers {get; set;} = true;
+
+    [JsonPropertyName("CoolDownMessageUnReady")]
+    public float CoolDownMessageUnReady {get; set;} = 20.0f;
+
+    [JsonPropertyName("EnableDefaultAgent")]
+    public bool EnableDefaultAgent {get; set;} = false;
+
+    [JsonPropertyName("ClanTagLeader")]
+    public string ClanTagLeader {get; set;} = "Leader -";
 }
