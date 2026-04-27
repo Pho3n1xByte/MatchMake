@@ -1,3 +1,4 @@
+![GitHub all releases](https://img.shields.io/github/downloads/Pho3n1xByte/MatchMake/total?style=for-the-badge)
 > [!CAUTION]
 > Это моя первая работа, я еще не знаю всех тонкостей, могут быть баги, не исключаю критических!
 # Об плагине / About Plugin
